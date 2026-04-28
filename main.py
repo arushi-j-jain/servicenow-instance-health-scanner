@@ -1,6 +1,7 @@
 import argparse
 import os
 import time
+import webbrowser
 from scanner.client import ServiceNowClient
 from scanner.models import Severity
 from report.generator import generate_report
@@ -171,7 +172,9 @@ def main():
     print("  Generating HTML report...", end="", flush=True)
     report_path = generate_report(results, overall, instance_url=report_url, metadata=metadata)
     print(f" done.")
-    print(f"  Report saved to: {os.path.abspath(report_path)}")
+    abs_path = os.path.abspath(report_path)
+    print(f"  Report saved to: {abs_path}")
+    webbrowser.open(f"file:///{abs_path.replace(os.sep, '/')}")
     print()
 
 
