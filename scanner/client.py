@@ -35,6 +35,14 @@ class ServiceNowClient:
         response.raise_for_status()
         return response.json().get("result", [])
 
+    def post_record(self, table, payload):
+        """Insert a new record into a ServiceNow table."""
+        url = f"{self.instance}/api/now/table/{table}"
+        self.call_count += 1
+        response = self.session.post(url, json=payload, timeout=30)
+        response.raise_for_status()
+        return response.json().get("result", {})
+
     def get_version(self):
         """Detect instance version from sys_properties, trying several known property names."""
         prop_names = ["glide.war", "glide.buildtag", "glide.war.build.tag", "glide.build.tag"]

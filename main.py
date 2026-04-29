@@ -5,6 +5,7 @@ import webbrowser
 from scanner.client import ServiceNowClient
 from scanner.models import Severity
 from report.generator import generate_report
+from scanner.pusher import push_results
 from scanner.analyzers import (
     business_rules,
     client_scripts,
@@ -175,7 +176,16 @@ def main():
     abs_path = os.path.abspath(report_path)
     print(f"  Report saved to: {abs_path}")
     webbrowser.open(f"file:///{abs_path.replace(os.sep, '/')}")
+
+    print("  Pushing results to ServiceNow...", end="", flush=True)
+    pushed, skip_reason = push_results(client, results, overall)
+    if skip_reason:
+        print(f"\r  ServiceNow push: skipped — {skip_reason}")
+    else:
+        print(f"\r  ServiceNow push: {pushed} records inserted into custom tables.")
     print()
+
+    return results, overall, client
 
 
 if __name__ == "__main__":

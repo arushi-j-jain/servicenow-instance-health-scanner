@@ -4,7 +4,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776ab.svg)](https://python.org)
 [![ServiceNow REST API](https://img.shields.io/badge/ServiceNow-REST%20API-81b5a1.svg)](https://developer.servicenow.com/dev.do#!/reference/api/latest/rest/c_TableAPI)
 
-> Scan your ServiceNow instance for configuration health issues, score each area 0–100, and generate a shareable single-file HTML report — in under 30 seconds.
+> Scan your ServiceNow instance for configuration health issues, score each area 0–100, generate a shareable single-file HTML report, and push results into custom ServiceNow tables for live tracking — all in under 30 seconds.
 
 ---
 
@@ -26,7 +26,11 @@
 | **ACLs** | Wildcard ACLs, rules with zero restrictions (no role/condition/script), rules missing role assignments |
 | **Incidents** | Open critical incidents, aging tickets (>30 days), high reassignment counts |
 
-**Report output includes:**
+## Outputs
+
+Every `python main.py` run produces two outputs automatically:
+
+### 1. HTML Report (auto-opens in browser)
 - Overall health score (0–100) displayed as a circular gauge
 - Executive summary written in consultant-style language, referencing your real numbers
 - Top 5 prioritised actions ranked by severity and count
@@ -36,6 +40,18 @@
 - Scan metadata: duration, API call count, ServiceNow version, tables scanned
 - Disclaimer banner distinguishing OOB defaults from custom misconfigurations
 - `--anonymize` flag to redact the instance URL for safe sharing
+
+### 2. ServiceNow Custom Tables (live tracking)
+After running `python setup_dashboard.py` once to create the tables, every scan automatically pushes results into two custom tables in your instance:
+
+| Table | What it stores | Direct URL |
+|---|---|---|
+| `u_health_scan_results` | One row per scan per domain — date, scores, finding counts | `your-instance.service-now.com/sn_ap_apm_u_health_scan_results.list` |
+| `u_health_scan_findings` | One row per finding — severity, title, description, recommendation | `your-instance.service-now.com/sn_ap_apm_u_health_scan_findings.list` |
+
+> **Note:** ServiceNow automatically prefixes table names with your instance's application scope. If your scope is `sn_ap_apm`, the tables will be named `sn_ap_apm_u_health_scan_results` and `sn_ap_apm_u_health_scan_findings`. The scanner detects and uses whatever names your instance creates.
+
+You can filter, sort, and export from these tables directly, or use them as data sources for your own reports and dashboards.
 
 ---
 
@@ -89,21 +105,34 @@ python test_connection.py
 
 You should see 5 recent incidents printed to the terminal. If you get an authentication error, double-check your password.
 
-### 5. Run the full scan
+### 5. (Optional) Set up ServiceNow tracking tables
+
+To push scan results into your ServiceNow instance for live tracking, run this once:
+
+```bash
+python setup_dashboard.py
+```
+
+This creates two custom tables (`u_health_scan_results` and `u_health_scan_findings`) in your instance. After setup, every `python main.py` run automatically pushes results into those tables. You can view them at:
+
+```
+https://your-instance.service-now.com/sn_ap_apm_u_health_scan_results.list
+https://your-instance.service-now.com/sn_ap_apm_u_health_scan_findings.list
+```
+
+If the tables can't be created via API (some instances restrict this), the script prints exact manual instructions for creating them in under 5 minutes via **System Definition > Tables**.
+
+### 6. Run the full scan
 
 ```bash
 python main.py
 ```
 
-The scan takes 15–40 seconds (11 API calls). When it completes, the HTML report is saved to:
+The scan takes 15–40 seconds. When it completes:
+- The HTML report is saved as `health_report.html` and **opens automatically in your browser**
+- If the tracking tables are set up, results are pushed to ServiceNow automatically
 
-```
-health_report.html
-```
-
-Open it by double-clicking the file in your file explorer.
-
-### 6. Share safely
+### 7. Share safely
 
 To generate a report with the instance URL redacted (for screenshots or demos):
 
@@ -158,7 +187,10 @@ Each analyzer is a standalone Python module in `scanner/analyzers/`. Adding a ne
 
 ```
 servicenow-health-scanner/
-├── main.py                       # Orchestrator: scan → score → report
+├── main.py                       # Orchestrator: scan → score → report → push
+├── setup_dashboard.py            # One-time setup: creates custom tables + reports
+├── run_setup.py                  # Single command: setup + first scan + push
+├── fix_fields.py                 # Diagnostic: verify and repair custom table fields
 ├── test_connection.py            # Quick connectivity check
 ├── requirements.txt
 ├── .env.example                  # Credential template
@@ -168,6 +200,7 @@ servicenow-health-scanner/
 ├── scanner/
 │   ├── client.py                 # ServiceNow REST API client
 │   ├── models.py                 # AreaResult + Finding + Severity
+│   ├── pusher.py                 # Pushes results to custom ServiceNow tables
 │   └── analyzers/
 │       ├── business_rules.py     # Queries sys_script
 │       ├── client_scripts.py     # Queries sys_script_client
