@@ -10,9 +10,7 @@
 
 ## Sample Report
 
-> *(Replace this with a screenshot of your generated `health_report.html`)*
-
-![Sample Report Screenshot](docs/sample_report.png)
+![Sample Report](screenshot.png)
 
 ---
 
